@@ -67,6 +67,10 @@ $GnuPlot4OrNewer=true
 $err="eplot: *** ERROR *** "
 $barStyleIndex="20"
 
+# default size for the 'dumb' terminal type
+$tcols=`tput cols`.chomp || 79
+$tlines=`tput lines`.chomp || 24
+
 $help=<<MARKER_MESSAGE
 Input data definition options:
  -m --mulfrmul   Multiple curves in a single diagram from different
@@ -189,7 +193,7 @@ class OptionController
 
 				# ---- Do we print to dumb terminal?
 				when /^-d$|^--dumb$/
-					com=com+"set terminal dumb;\n"
+					com=com+"set terminal dumb size #{$tcols},#{$tlines};\n"
 
 				# ---- Multiple curves in a single diagram from different files
 				when /^-m$|^--mulfrmul$/
