@@ -77,6 +77,8 @@ Input data definition options:
                  files. Each file contains a single column
  -M --mulfrsin   Multiple curves in a single diagram from a single file
                  curves are in different columns
+    -T           load titles from first row of multi-column input file
+                 (implies '-M')
  -S --mulfrseq   Multiple curves in a single diagram from a single file
                  curves are in the same column sep. by a blank line
                  (the curve data must be separated by blank lines)
@@ -136,6 +138,7 @@ class OptionController
 		@o["DoPDF"]=false
 		@o["MulFrMul"]=false
 		@o["MulFrSin"]=false
+		@o["MulFrSinTitles"]=false
 		@o["MulFrSeq"]=false
 		@o["DumpFiles"]=false
 		@o["TitleString"]=""
@@ -204,6 +207,11 @@ class OptionController
 				when /^-M$|^--mulfrsin$/
 					@o["MulFrSin"]=true
 
+				# ---- Load titles from first line of multi-column input file
+				when /^-T$/
+					@o["MulFrSin"]=true
+					@o["MulFrSinTitles"]=true
+
 				# ---- Multiple curves in a single diagram from a single column
 				when /^-S$|^--mulfrsinseq$/
 					@o["MulFrSeq"]=true
@@ -248,7 +256,7 @@ class OptionController
 					com=com+"set xlabel \""+checkOptArg(xargv,i)+"\";\n"
 					i=i+1
 
-                # ---- gnuplot 'xtics' option
+				# ---- gnuplot 'xtics' option
 				when /^--xtics$/
 					com=com+"set xtics \""+checkOptArg(xargv,i)+"\";\n"
 					i=i+1
@@ -427,22 +435,6 @@ class Controller
 	end
 
 	# --------------------------------------------------------------------------
-	# ---- extract a column with a given index
-	# ---- from a file and write it as single column
-	# ---- into another file
-	def extractColumn(fromFilename,index,toFile)
-		begin
-			file = File.open(fromFilename)
-		rescue
-			$stderr.printf "%scannot open file '%s' for reading!\n",$err,fromFilename
-			exit 1
-		end
-		file.each_line { |line| toFile.puts line.split(" ")[index-1] }
-		toFile.flush
-		file.close
-	end
-
-	# --------------------------------------------------------------------------
 	# ---- run a single plot from a single file
 	def runSinFrSin(filename)
 		styleArr=@oc["StyleIndices"].split(",")
@@ -591,21 +583,43 @@ class Controller
 	# --------------------------------------------------------------------------
 	# ---- run multiple plots from a single file
 	def runMulFrSin(filename)
-		nocols=0
-		# ---- Let's see how many columns we have in the file
-		File.open(filename) { |x| nocols=x.gets.split(" ").length }
+		files=[]
+		file=File.open(filename)
+		first=file.readline.split(" ")
+		nocols=first.length
 		$stderr.printf "Found %d columns\n",nocols
 
-		# ---- Traverse the columns and put them into seperate files
-		files=[]
-		for i in (1..nocols)
-			tmpf=Tempfile.new("eplot")
-			files.push(tmpf)
-			extractColumn(filename,i,tmpf)
+		# ---- If '-T' provided, read first row as series titles
+		if @oc["MulFrSinTitles"]
+			@oc["TitleString"]=first.join("@")
+		else
+			removeDummyTitles(nocols)
+			file.rewind
 		end
 
+		# ---- Traverse the columns and put them into separate files
+		for _ in (1..nocols)
+			begin
+				files.push(Tempfile.new("eplot"))
+			rescue
+				$stderr.printf "%scannot open temp file '%s'!\n",$err,tmpf
+			end
+		end
+
+		file.each_line do |l|
+			l.chomp.split(" ").each_with_index do |v, i|
+				if i > nocols-1
+					$stderr.printf \
+						"Too many columns on lineno %i (expected %i)\n", \
+						file.lineno, nocols
+				end
+				# write this column's value to corresponding temp file
+				files[i].puts v
+			end
+		end
+		files.each { |f| f.flush }
+
 		# ---- Call it as if we had multiple files
-		removeDummyTitles(files.length)
 		runMulFrMulOpenedFiles(files)
 		files.each { |f| f.close }
 	end
