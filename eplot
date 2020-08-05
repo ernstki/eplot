@@ -77,8 +77,7 @@ Input data definition options:
                  files. Each file contains a single column
  -M --mulfrsin   Multiple curves in a single diagram from a single file
                  curves are in different columns
-    -T           load titles from first row of multi-column input file
-                 (implies '-M')
+    -T           get titles from first row of input file (implies -M)
  -S --mulfrseq   Multiple curves in a single diagram from a single file
                  curves are in the same column sep. by a blank line
                  (the curve data must be separated by blank lines)
