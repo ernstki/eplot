@@ -98,6 +98,7 @@ Output formatting options:
  -l <type>       set the type of curve (lines,points,linespoints,...)
  -w <width>      set the line width (default: 1)
  -x <x-axis-opt> provide x-axis options
+    --xtics ...  provide xtics options (e.g. "scale 1,2,10")
     --xlog       log x-axis
  -y <y-axis-opt> provide y-axis options
     --ylog       log y-axis
@@ -245,6 +246,11 @@ class OptionController
 				# ---- the x-axis label
 				when /^-x$|^--xlabel$/
 					com=com+"set xlabel \""+checkOptArg(xargv,i)+"\";\n"
+					i=i+1
+
+                # ---- gnuplot 'xtics' option
+				when /^--xtics$/
+					com=com+"set xtics \""+checkOptArg(xargv,i)+"\";\n"
 					i=i+1
 
 				# ---- log x-axis
